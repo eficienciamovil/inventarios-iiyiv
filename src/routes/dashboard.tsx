@@ -31,11 +31,6 @@ function Dashboard() {
     acum: Number(r.PorcentajeAcum.toFixed(2)),
   }));
 
-  const freqData = ["Semanal", "Quincenal", "Mensual", "Trimestral"].map((f) => ({
-    name: f,
-    cantidad: rows.filter((r) => r.Frecuencia === f).length,
-  }));
-
   const pieData = [
     { name: "A", value: cntA, color: "var(--pareto-a)" },
     { name: "B", value: cntB, color: "var(--pareto-b)" },
