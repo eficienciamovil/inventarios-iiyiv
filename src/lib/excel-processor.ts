@@ -94,30 +94,45 @@ export function formatARS(n: number): string {
 }
 
 // --- Header detection ---
+// Normaliza encabezados: minúsculas, sin acentos, sin puntos/espacios/guiones, sin caracteres invisibles
+function normHeader(s: any): string {
+  return String(s ?? "")
+    .replace(/\u00A0/g, " ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s._\-/\\()]/g, "")
+    .trim();
+}
+
 function findHeaderRow(rows: any[][], required: string[]): number {
-  const reqLower = required.map((r) => r.toLowerCase());
-  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+  const req = required.map(normHeader);
+  let bestRow = 0;
+  let bestScore = 0;
+  for (let i = 0; i < Math.min(rows.length, 40); i++) {
     const row = rows[i] || [];
-    const cells = row.map((c) => normText(c).toLowerCase());
-    const matches = reqLower.filter((r) =>
-      cells.some((c) => c === r || c.includes(r)),
-    ).length;
-    if (matches >= Math.min(2, reqLower.length)) return i;
+    const cells = row.map(normHeader);
+    const score = req.filter((r) => cells.some((c) => c === r || c.includes(r) || r.includes(c))).length;
+    if (score > bestScore) { bestScore = score; bestRow = i; }
+    if (score >= req.length) return i;
   }
-  return 0;
+  return bestRow;
 }
 
 function colIndex(headers: string[], names: string[]): number {
-  const lower = headers.map((h) => normText(h).toLowerCase());
+  const norm = headers.map(normHeader);
+  // exact
   for (const n of names) {
-    const nl = n.toLowerCase();
-    const idx = lower.findIndex((h) => h === nl);
+    const nl = normHeader(n);
+    const idx = norm.findIndex((h) => h === nl);
     if (idx >= 0) return idx;
   }
+  // contains
   for (const n of names) {
-    const nl = n.toLowerCase();
-    const idx = lower.findIndex((h) => h.includes(nl));
-    if (idx >= 0) return idx;
+    const nl = normHeader(n);
+    if (!nl) continue;
+    const idx = norm.findIndex((h) => h.includes(nl) || nl.includes(h));
+    if (idx >= 0 && norm[idx]) return idx;
   }
   return -1;
 }
