@@ -145,19 +145,72 @@ export function readWorkbook(file: ArrayBuffer): any[][] {
 
 const NME_VARIANTS = ["NME", "N M E", "N.M.E", "NroNME", "NumeroNME", "CodigoNME", "Codigo", "Código", "Nro", "Nro.", "N°", "Numero", "Número", "Item", "Ítem", "ID", "Articulo", "Artículo", "SKU", "Material"];
 
+// Patrón NME real: 4 dígitos + "IN" + dígitos (ej: 8440IN4000010)
+const NME_PATTERN = /^\d{4}IN\d+$/i;
+
+function isNMEValue(v: any): boolean {
+  if (v === null || v === undefined) return false;
+  const s = String(v).replace(/[\s\u00A0]/g, "").toUpperCase();
+  return NME_PATTERN.test(s);
+}
+
+// Detecta la columna del NME escaneando los valores de las primeras filas
+function findNMEColByPattern(rows: any[][]): { col: number; firstDataRow: number } {
+  let bestCol = -1, bestHits = 0, firstRow = -1;
+  const maxRows = Math.min(rows.length, 300);
+  const maxCol = rows.slice(0, maxRows).reduce((m, r) => Math.max(m, (r || []).length), 0);
+  for (let c = 0; c < maxCol; c++) {
+    let hits = 0, fr = -1;
+    for (let i = 0; i < maxRows; i++) {
+      if (isNMEValue((rows[i] || [])[c])) {
+        hits++;
+        if (fr < 0) fr = i;
+      }
+    }
+    if (hits > bestHits) { bestHits = hits; bestCol = c; firstRow = fr; }
+  }
+  return bestHits >= 2 ? { col: bestCol, firstDataRow: firstRow } : { col: -1, firstDataRow: -1 };
+}
+
+// Combina 1-3 filas de encabezado para soportar headers multilínea (ej: "Arancel" / "Importe")
+function buildHeaderStrip(rows: any[][], headerIdx: number): string[] {
+  const a = rows[headerIdx] || [];
+  const b = rows[headerIdx - 1] || [];
+  const c = rows[headerIdx + 1] || [];
+  const len = Math.max(a.length, b.length, c.length);
+  const out: string[] = [];
+  for (let i = 0; i < len; i++) {
+    const parts = [b[i], a[i], c[i]].map((v) => normText(v)).filter(Boolean);
+    out.push(parts.join(" "));
+  }
+  return out;
+}
+
 export function parseAranceles(rows: any[][]): { data: ArancelRow[]; headers: string[] } {
-  const headerIdx = findHeaderRow(rows, ["NME", "Importe", "Descripcion"]);
-  const headers = (rows[headerIdx] || []).map((h) => String(h));
-  const iNME = colIndex(headers, NME_VARIANTS);
+  // 1. Detectar columna NME por patrón de valor (más confiable)
+  const detected = findNMEColByPattern(rows);
+  let nmeCol = detected.col;
+  let headerIdx = detected.firstDataRow > 0 ? detected.firstDataRow - 1 : findHeaderRow(rows, ["NME", "Importe", "Descripcion"]);
+
+  // 2. Combinar encabezados multilínea
+  const headers = buildHeaderStrip(rows, headerIdx);
+
+  // 3. Si no detectamos por patrón, buscar por texto del encabezado
+  if (nmeCol < 0) nmeCol = colIndex(headers, NME_VARIANTS);
+
   const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
   const iUMD = colIndex(headers, ["UMD", "Unidad", "U.M.", "UM", "UnidadMedida"]);
-  const iImp = colIndex(headers, ["Importe", "Precio", "Valor", "Costo", "PrecioUnitario", "ImporteUnitario"]);
-  const iFecha = colIndex(headers, ["Fecha", "FechaArancel", "Vigencia"]);
-  if (iNME < 0) return { data: [], headers };
+  const iImp = colIndex(headers, ["Importe", "ArancelImporte", "Precio", "Valor", "Costo", "PrecioUnitario", "ImporteUnitario"]);
+  const iFecha = colIndex(headers, ["A fecha", "Afecha", "Fecha", "FechaArancel", "Vigencia"]);
+
+  if (nmeCol < 0) return { data: [], headers };
+
   const out: ArancelRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    const nme = normNME(r[iNME]);
+    const raw = r[nmeCol];
+    if (!isNMEValue(raw) && !normNME(raw)) continue;
+    const nme = normNME(raw);
     if (!nme) continue;
     out.push({
       NME: nme,
@@ -174,7 +227,6 @@ function formatFecha(v: any): string {
   if (!v) return "";
   if (v instanceof Date) return v.toLocaleDateString("es-AR");
   if (typeof v === "number") {
-    // Excel serial date
     const d = XLSX.SSF.parse_date_code(v);
     if (d) return `${String(d.d).padStart(2, "0")}/${String(d.m).padStart(2, "0")}/${d.y}`;
   }
@@ -182,9 +234,12 @@ function formatFecha(v: any): string {
 }
 
 export function parseInventario(rows: any[][]): { data: InventarioRow[]; headers: string[] } {
-  const headerIdx = findHeaderRow(rows, ["NME", "Total", "Descripcion"]);
-  const headers = (rows[headerIdx] || []).map((h) => String(h));
-  const iNME = colIndex(headers, NME_VARIANTS);
+  const detected = findNMEColByPattern(rows);
+  let nmeCol = detected.col;
+  let headerIdx = detected.firstDataRow > 0 ? detected.firstDataRow - 1 : findHeaderRow(rows, ["NME", "Total", "Descripcion"]);
+  const headers = buildHeaderStrip(rows, headerIdx);
+  if (nmeCol < 0) nmeCol = colIndex(headers, NME_VARIANTS);
+
   const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
   const iTalle = colIndex(headers, ["Talle", "Talla", "Medida"]);
   const iNuevo = colIndex(headers, ["Nuevo", "Nuevos"]);
@@ -192,11 +247,13 @@ export function parseInventario(rows: any[][]): { data: InventarioRow[]; headers
   const iRezago = colIndex(headers, ["Rezago", "Rezagos"]);
   const iBA = colIndex(headers, ["B/Acta", "BActa", "B Acta", "Acta", "BajaActa"]);
   const iTotal = colIndex(headers, ["Total", "Cantidad", "Stock", "Existencia"]);
-  if (iNME < 0) return { data: [], headers };
+
+  if (nmeCol < 0) return { data: [], headers };
+
   const out: InventarioRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    const nme = normNME(r[iNME]);
+    const nme = normNME(r[nmeCol]);
     if (!nme) continue;
     out.push({
       NME: nme,
