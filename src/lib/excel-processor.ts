@@ -145,6 +145,33 @@ export function readWorkbook(file: ArrayBuffer): any[][] {
 
 const NME_VARIANTS = ["NME", "N M E", "N.M.E", "NroNME", "NumeroNME", "CodigoNME", "Codigo", "Código", "Nro", "Nro.", "N°", "Numero", "Número", "Item", "Ítem", "ID", "Articulo", "Artículo", "SKU", "Material"];
 
+// Patrón NME real: 4 dígitos + "IN" + dígitos (ej: 8440IN4000010)
+const NME_PATTERN = /^\d{4}IN\d+$/i;
+
+function isNMEValue(v: any): boolean {
+  if (v === null || v === undefined) return false;
+  const s = String(v).replace(/[\s\u00A0]/g, "").toUpperCase();
+  return NME_PATTERN.test(s);
+}
+
+// Detecta la columna del NME escaneando los valores de las primeras filas
+function findNMEColByPattern(rows: any[][]): { col: number; firstDataRow: number } {
+  let bestCol = -1, bestHits = 0, firstRow = -1;
+  const maxRows = Math.min(rows.length, 300);
+  const maxCol = rows.slice(0, maxRows).reduce((m, r) => Math.max(m, (r || []).length), 0);
+  for (let c = 0; c < maxCol; c++) {
+    let hits = 0, fr = -1;
+    for (let i = 0; i < maxRows; i++) {
+      if (isNMEValue((rows[i] || [])[c])) {
+        hits++;
+        if (fr < 0) fr = i;
+      }
+    }
+    if (hits > bestHits) { bestHits = hits; bestCol = c; firstRow = fr; }
+  }
+  return bestHits >= 2 ? { col: bestCol, firstDataRow: firstRow } : { col: -1, firstDataRow: -1 };
+}
+
 export function parseAranceles(rows: any[][]): { data: ArancelRow[]; headers: string[] } {
   const headerIdx = findHeaderRow(rows, ["NME", "Importe", "Descripcion"]);
   const headers = (rows[headerIdx] || []).map((h) => String(h));
