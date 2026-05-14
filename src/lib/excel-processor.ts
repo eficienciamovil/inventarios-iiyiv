@@ -181,21 +181,22 @@ function formatFecha(v: any): string {
   return normText(v);
 }
 
-export function parseInventario(rows: any[][]): InventarioRow[] {
+export function parseInventario(rows: any[][]): { data: InventarioRow[]; headers: string[] } {
   const headerIdx = findHeaderRow(rows, ["NME", "Total", "Descripcion"]);
   const headers = (rows[headerIdx] || []).map((h) => String(h));
-  const iNME = colIndex(headers, ["NME"]);
-  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle"]);
-  const iTalle = colIndex(headers, ["Talle", "Talla"]);
-  const iNuevo = colIndex(headers, ["Nuevo"]);
-  const iUsado = colIndex(headers, ["Usado"]);
-  const iRezago = colIndex(headers, ["Rezago"]);
-  const iBA = colIndex(headers, ["B/Acta", "BActa", "B Acta", "Acta"]);
-  const iTotal = colIndex(headers, ["Total", "Cantidad"]);
+  const iNME = colIndex(headers, NME_VARIANTS);
+  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
+  const iTalle = colIndex(headers, ["Talle", "Talla", "Medida"]);
+  const iNuevo = colIndex(headers, ["Nuevo", "Nuevos"]);
+  const iUsado = colIndex(headers, ["Usado", "Usados"]);
+  const iRezago = colIndex(headers, ["Rezago", "Rezagos"]);
+  const iBA = colIndex(headers, ["B/Acta", "BActa", "B Acta", "Acta", "BajaActa"]);
+  const iTotal = colIndex(headers, ["Total", "Cantidad", "Stock", "Existencia"]);
+  if (iNME < 0) return { data: [], headers };
   const out: InventarioRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    const nme = normNME(iNME >= 0 ? r[iNME] : "");
+    const nme = normNME(r[iNME]);
     if (!nme) continue;
     out.push({
       NME: nme,
@@ -208,7 +209,7 @@ export function parseInventario(rows: any[][]): InventarioRow[] {
       Total: iTotal >= 0 ? parseNumberAR(r[iTotal]) : null,
     });
   }
-  return out;
+  return { data: out, headers };
 }
 
 // --- Similarity ---
