@@ -143,18 +143,21 @@ export function readWorkbook(file: ArrayBuffer): any[][] {
   return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" }) as any[][];
 }
 
-export function parseAranceles(rows: any[][]): ArancelRow[] {
+const NME_VARIANTS = ["NME", "N M E", "N.M.E", "NroNME", "NumeroNME", "CodigoNME", "Codigo", "Código", "Nro", "Nro.", "N°", "Numero", "Número", "Item", "Ítem", "ID", "Articulo", "Artículo", "SKU", "Material"];
+
+export function parseAranceles(rows: any[][]): { data: ArancelRow[]; headers: string[] } {
   const headerIdx = findHeaderRow(rows, ["NME", "Importe", "Descripcion"]);
   const headers = (rows[headerIdx] || []).map((h) => String(h));
-  const iNME = colIndex(headers, ["NME"]);
-  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle"]);
-  const iUMD = colIndex(headers, ["UMD", "Unidad", "U.M."]);
-  const iImp = colIndex(headers, ["Importe", "Precio", "Valor", "Costo"]);
-  const iFecha = colIndex(headers, ["Fecha"]);
+  const iNME = colIndex(headers, NME_VARIANTS);
+  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
+  const iUMD = colIndex(headers, ["UMD", "Unidad", "U.M.", "UM", "UnidadMedida"]);
+  const iImp = colIndex(headers, ["Importe", "Precio", "Valor", "Costo", "PrecioUnitario", "ImporteUnitario"]);
+  const iFecha = colIndex(headers, ["Fecha", "FechaArancel", "Vigencia"]);
+  if (iNME < 0) return { data: [], headers };
   const out: ArancelRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    const nme = normNME(iNME >= 0 ? r[iNME] : "");
+    const nme = normNME(r[iNME]);
     if (!nme) continue;
     out.push({
       NME: nme,
@@ -164,7 +167,7 @@ export function parseAranceles(rows: any[][]): ArancelRow[] {
       Fecha: formatFecha(iFecha >= 0 ? r[iFecha] : ""),
     });
   }
-  return out;
+  return { data: out, headers };
 }
 
 function formatFecha(v: any): string {
