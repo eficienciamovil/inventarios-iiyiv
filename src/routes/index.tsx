@@ -29,12 +29,18 @@ function Home() {
       const rows = readWorkbook(buf);
       if (slot === "ara") {
         const parsed = parseAranceles(rows);
-        if (!parsed.length) throw new Error("No se detectó la columna NME en aranceles");
-        store.set({ aranceles: parsed });
+        if (!parsed.data.length) {
+          const detectados = parsed.headers.filter(Boolean).join(" · ") || "(ninguno)";
+          throw new Error(`No se detectó la columna NME en aranceles. Encabezados detectados: ${detectados}.`);
+        }
+        store.set({ aranceles: parsed.data });
       } else {
         const parsed = parseInventario(rows);
-        if (!parsed.length) throw new Error("No se detectó la columna NME en inventario");
-        store.set({ inventario: parsed });
+        if (!parsed.data.length) {
+          const detectados = parsed.headers.filter(Boolean).join(" · ") || "(ninguno)";
+          throw new Error(`No se detectó la columna NME en inventario. Encabezados detectados: ${detectados}.`);
+        }
+        store.set({ inventario: parsed.data });
       }
     } catch (e: any) {
       setError(e?.message || "Error leyendo archivo");

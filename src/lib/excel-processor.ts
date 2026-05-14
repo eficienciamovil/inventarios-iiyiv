@@ -94,30 +94,45 @@ export function formatARS(n: number): string {
 }
 
 // --- Header detection ---
+// Normaliza encabezados: minúsculas, sin acentos, sin puntos/espacios/guiones, sin caracteres invisibles
+function normHeader(s: any): string {
+  return String(s ?? "")
+    .replace(/\u00A0/g, " ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s._\-/\\()]/g, "")
+    .trim();
+}
+
 function findHeaderRow(rows: any[][], required: string[]): number {
-  const reqLower = required.map((r) => r.toLowerCase());
-  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+  const req = required.map(normHeader);
+  let bestRow = 0;
+  let bestScore = 0;
+  for (let i = 0; i < Math.min(rows.length, 40); i++) {
     const row = rows[i] || [];
-    const cells = row.map((c) => normText(c).toLowerCase());
-    const matches = reqLower.filter((r) =>
-      cells.some((c) => c === r || c.includes(r)),
-    ).length;
-    if (matches >= Math.min(2, reqLower.length)) return i;
+    const cells = row.map(normHeader);
+    const score = req.filter((r) => cells.some((c) => c === r || c.includes(r) || r.includes(c))).length;
+    if (score > bestScore) { bestScore = score; bestRow = i; }
+    if (score >= req.length) return i;
   }
-  return 0;
+  return bestRow;
 }
 
 function colIndex(headers: string[], names: string[]): number {
-  const lower = headers.map((h) => normText(h).toLowerCase());
+  const norm = headers.map(normHeader);
+  // exact
   for (const n of names) {
-    const nl = n.toLowerCase();
-    const idx = lower.findIndex((h) => h === nl);
+    const nl = normHeader(n);
+    const idx = norm.findIndex((h) => h === nl);
     if (idx >= 0) return idx;
   }
+  // contains
   for (const n of names) {
-    const nl = n.toLowerCase();
-    const idx = lower.findIndex((h) => h.includes(nl));
-    if (idx >= 0) return idx;
+    const nl = normHeader(n);
+    if (!nl) continue;
+    const idx = norm.findIndex((h) => h.includes(nl) || nl.includes(h));
+    if (idx >= 0 && norm[idx]) return idx;
   }
   return -1;
 }
@@ -128,18 +143,21 @@ export function readWorkbook(file: ArrayBuffer): any[][] {
   return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" }) as any[][];
 }
 
-export function parseAranceles(rows: any[][]): ArancelRow[] {
+const NME_VARIANTS = ["NME", "N M E", "N.M.E", "NroNME", "NumeroNME", "CodigoNME", "Codigo", "Código", "Nro", "Nro.", "N°", "Numero", "Número", "Item", "Ítem", "ID", "Articulo", "Artículo", "SKU", "Material"];
+
+export function parseAranceles(rows: any[][]): { data: ArancelRow[]; headers: string[] } {
   const headerIdx = findHeaderRow(rows, ["NME", "Importe", "Descripcion"]);
   const headers = (rows[headerIdx] || []).map((h) => String(h));
-  const iNME = colIndex(headers, ["NME"]);
-  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle"]);
-  const iUMD = colIndex(headers, ["UMD", "Unidad", "U.M."]);
-  const iImp = colIndex(headers, ["Importe", "Precio", "Valor", "Costo"]);
-  const iFecha = colIndex(headers, ["Fecha"]);
+  const iNME = colIndex(headers, NME_VARIANTS);
+  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
+  const iUMD = colIndex(headers, ["UMD", "Unidad", "U.M.", "UM", "UnidadMedida"]);
+  const iImp = colIndex(headers, ["Importe", "Precio", "Valor", "Costo", "PrecioUnitario", "ImporteUnitario"]);
+  const iFecha = colIndex(headers, ["Fecha", "FechaArancel", "Vigencia"]);
+  if (iNME < 0) return { data: [], headers };
   const out: ArancelRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    const nme = normNME(iNME >= 0 ? r[iNME] : "");
+    const nme = normNME(r[iNME]);
     if (!nme) continue;
     out.push({
       NME: nme,
@@ -149,7 +167,7 @@ export function parseAranceles(rows: any[][]): ArancelRow[] {
       Fecha: formatFecha(iFecha >= 0 ? r[iFecha] : ""),
     });
   }
-  return out;
+  return { data: out, headers };
 }
 
 function formatFecha(v: any): string {
@@ -163,21 +181,22 @@ function formatFecha(v: any): string {
   return normText(v);
 }
 
-export function parseInventario(rows: any[][]): InventarioRow[] {
+export function parseInventario(rows: any[][]): { data: InventarioRow[]; headers: string[] } {
   const headerIdx = findHeaderRow(rows, ["NME", "Total", "Descripcion"]);
   const headers = (rows[headerIdx] || []).map((h) => String(h));
-  const iNME = colIndex(headers, ["NME"]);
-  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle"]);
-  const iTalle = colIndex(headers, ["Talle", "Talla"]);
-  const iNuevo = colIndex(headers, ["Nuevo"]);
-  const iUsado = colIndex(headers, ["Usado"]);
-  const iRezago = colIndex(headers, ["Rezago"]);
-  const iBA = colIndex(headers, ["B/Acta", "BActa", "B Acta", "Acta"]);
-  const iTotal = colIndex(headers, ["Total", "Cantidad"]);
+  const iNME = colIndex(headers, NME_VARIANTS);
+  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
+  const iTalle = colIndex(headers, ["Talle", "Talla", "Medida"]);
+  const iNuevo = colIndex(headers, ["Nuevo", "Nuevos"]);
+  const iUsado = colIndex(headers, ["Usado", "Usados"]);
+  const iRezago = colIndex(headers, ["Rezago", "Rezagos"]);
+  const iBA = colIndex(headers, ["B/Acta", "BActa", "B Acta", "Acta", "BajaActa"]);
+  const iTotal = colIndex(headers, ["Total", "Cantidad", "Stock", "Existencia"]);
+  if (iNME < 0) return { data: [], headers };
   const out: InventarioRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    const nme = normNME(iNME >= 0 ? r[iNME] : "");
+    const nme = normNME(r[iNME]);
     if (!nme) continue;
     out.push({
       NME: nme,
@@ -190,7 +209,7 @@ export function parseInventario(rows: any[][]): InventarioRow[] {
       Total: iTotal >= 0 ? parseNumberAR(r[iTotal]) : null,
     });
   }
-  return out;
+  return { data: out, headers };
 }
 
 // --- Similarity ---
