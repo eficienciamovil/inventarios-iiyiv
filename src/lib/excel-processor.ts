@@ -186,6 +186,20 @@ function buildHeaderStrip(rows: any[][], headerIdx: number): string[] {
   return out;
 }
 
+function hasUsefulValues(rows: any[][], startRow: number, col: number, kind: "text" | "number" = "text"): boolean {
+  if (col < 0) return false;
+  for (let i = Math.max(0, startRow); i < Math.min(rows.length, startRow + 30); i++) {
+    const value = (rows[i] || [])[col];
+    if (kind === "number") {
+      const parsed = parseNumberAR(value);
+      if (parsed !== null && parsed !== 0) return true;
+    } else if (normText(value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function parseAranceles(rows: any[][]): { data: ArancelRow[]; headers: string[] } {
   // 1. Detectar columna NME por patrón de valor (más confiable)
   const detected = findNMEColByPattern(rows);
@@ -198,12 +212,20 @@ export function parseAranceles(rows: any[][]): { data: ArancelRow[]; headers: st
   // 3. Si no detectamos por patrón, buscar por texto del encabezado
   if (nmeCol < 0) nmeCol = colIndex(headers, NME_VARIANTS);
 
-  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
-  const iUMD = colIndex(headers, ["UMD", "Unidad", "U.M.", "UM", "UnidadMedida"]);
-  const iImp = colIndex(headers, ["Importe", "ArancelImporte", "Precio", "Valor", "Costo", "PrecioUnitario", "ImporteUnitario"]);
-  const iFecha = colIndex(headers, ["A fecha", "Afecha", "Fecha", "FechaArancel", "Vigencia"]);
+  const dataStart = detected.firstDataRow > 0 ? detected.firstDataRow : headerIdx + 1;
+  let iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
+  let iUMD = colIndex(headers, ["UMD", "Unidad", "U.M.", "UM", "UnidadMedida"]);
+  let iImp = colIndex(headers, ["Importe", "ArancelImporte", "Precio", "Valor", "Costo", "PrecioUnitario", "ImporteUnitario"]);
+  let iFecha = colIndex(headers, ["A fecha", "Afecha", "Fecha", "FechaArancel", "Vigencia"]);
 
   if (nmeCol < 0) return { data: [], headers };
+
+  // Fallback por posición relativa al NME para planillas con encabezado institucional/multifila.
+  // Formato arancel observado: NME | Descripción | UMD | Importe | A fecha
+  if (!hasUsefulValues(rows, dataStart, iDesc, "text")) iDesc = nmeCol + 1;
+  if (!hasUsefulValues(rows, dataStart, iUMD, "text")) iUMD = nmeCol + 2;
+  if (!hasUsefulValues(rows, dataStart, iImp, "number")) iImp = nmeCol + 3;
+  if (!hasUsefulValues(rows, dataStart, iFecha, "text")) iFecha = nmeCol + 4;
 
   const out: ArancelRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
