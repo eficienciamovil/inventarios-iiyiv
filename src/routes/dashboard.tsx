@@ -31,11 +31,6 @@ function Dashboard() {
     acum: Number(r.PorcentajeAcum.toFixed(2)),
   }));
 
-  const freqData = ["Semanal", "Quincenal", "Mensual", "Trimestral"].map((f) => ({
-    name: f,
-    cantidad: rows.filter((r) => r.Frecuencia === f).length,
-  }));
-
   const pieData = [
     { name: "A", value: cntA, color: "var(--pareto-a)" },
     { name: "B", value: cntB, color: "var(--pareto-b)" },
@@ -99,39 +94,32 @@ function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5 mt-6">
-        <Card className="p-5">
-          <h3 className="font-semibold mb-1">Frecuencia de control sugerida</h3>
-          <p className="text-xs text-muted-foreground mb-4">Cantidad de artículos por frecuencia</p>
-          <div className="h-[260px]">
-            <ResponsiveContainer>
-              <BarChart data={freqData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="cantidad" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
+      <div className="mt-6">
         <Card className="p-5">
           <h3 className="font-semibold mb-1">Top 20 artículos por valor</h3>
-          <p className="text-xs text-muted-foreground mb-4">Ordenados por impacto económico</p>
-          <div className="overflow-y-auto max-h-[260px]">
+          <p className="text-xs text-muted-foreground mb-4">Ordenados por impacto económico · incluye frecuencia de control sugerida</p>
+          <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-card">
                 <tr className="text-left text-muted-foreground border-b">
-                  <th className="py-2">#</th><th>NME</th><th className="text-right">Valor</th><th className="text-right">%</th>
+                  <th className="py-2 pr-3">#</th>
+                  <th className="pr-3">NME</th>
+                  <th className="pr-3">Descripción</th>
+                  <th className="pr-3">Cat.</th>
+                  <th className="pr-3">Frecuencia</th>
+                  <th className="text-right pr-3">Valor</th>
+                  <th className="text-right">%</th>
                 </tr>
               </thead>
               <tbody>
                 {top20.map((r, i) => (
                   <tr key={r.NME} className="border-b last:border-0">
                     <td className="py-1.5 text-muted-foreground">{i + 1}</td>
-                    <td className="font-mono">{r.NME}</td>
-                    <td className="text-right font-medium">{formatARS(r.ValorTotal)}</td>
+                    <td className="font-mono pr-3">{r.NME}</td>
+                    <td className="pr-3 max-w-[320px] truncate" title={r.DescripcionInv || r.DescripcionAra}>{r.DescripcionInv || r.DescripcionAra || "—"}</td>
+                    <td className="pr-3 font-semibold">{r.Categoria}</td>
+                    <td className="pr-3">{r.Frecuencia}</td>
+                    <td className="text-right font-medium pr-3">{formatARS(r.ValorTotal)}</td>
                     <td className="text-right text-muted-foreground">{r.Porcentaje.toFixed(2)}%</td>
                   </tr>
                 ))}
