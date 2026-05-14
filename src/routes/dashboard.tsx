@@ -116,7 +116,7 @@ function Dashboard() {
                   <tr key={r.NME} className="border-b last:border-0">
                     <td className="py-1.5 text-muted-foreground">{i + 1}</td>
                     <td className="font-mono pr-3">{r.NME}</td>
-                    <td className="pr-3 max-w-[320px] truncate" title={r.Descripcion}>{r.Descripcion || "—"}</td>
+                    <td className="pr-3 max-w-[320px] truncate" title={r.DescripcionInv || r.DescripcionAra}>{r.Descripcion || "—"}</td>
                     <td className="pr-3 font-semibold">{r.Categoria}</td>
                     <td className="pr-3">{r.Frecuencia}</td>
                     <td className="text-right font-medium pr-3">{formatARS(r.ValorTotal)}</td>
