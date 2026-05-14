@@ -262,15 +262,26 @@ export function parseInventario(rows: any[][]): { data: InventarioRow[]; headers
   const headers = buildHeaderStrip(rows, headerIdx);
   if (nmeCol < 0) nmeCol = colIndex(headers, NME_VARIANTS);
 
-  const iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
-  const iTalle = colIndex(headers, ["Talle", "Talla", "Medida"]);
-  const iNuevo = colIndex(headers, ["Nuevo", "Nuevos"]);
-  const iUsado = colIndex(headers, ["Usado", "Usados"]);
-  const iRezago = colIndex(headers, ["Rezago", "Rezagos"]);
-  const iBA = colIndex(headers, ["B/Acta", "BActa", "B Acta", "Acta", "BajaActa"]);
-  const iTotal = colIndex(headers, ["Total", "Cantidad", "Stock", "Existencia"]);
+  const dataStart = detected.firstDataRow > 0 ? detected.firstDataRow : headerIdx + 1;
+  let iDesc = colIndex(headers, ["Descripcion", "Descripción", "Detalle", "Articulo", "Artículo", "Producto"]);
+  let iTalle = colIndex(headers, ["Talle", "Talla", "Medida"]);
+  let iNuevo = colIndex(headers, ["Nuevo", "Nuevos"]);
+  let iUsado = colIndex(headers, ["Usado", "Usados"]);
+  let iRezago = colIndex(headers, ["Rezago", "Rezagos"]);
+  let iBA = colIndex(headers, ["B/Acta", "BActa", "B Acta", "Acta", "BajaActa"]);
+  let iTotal = colIndex(headers, ["Total", "Cantidad", "Stock", "Existencia"]);
 
   if (nmeCol < 0) return { data: [], headers };
+
+  // Fallback por posición relativa al NME.
+  // Formato inventario esperado: NME | Descripción | Talle | Nuevo | Usado | Rezago | B/Acta | Total
+  if (!hasUsefulValues(rows, dataStart, iDesc, "text")) iDesc = nmeCol + 1;
+  if (!hasUsefulValues(rows, dataStart, iTalle, "text")) iTalle = nmeCol + 2;
+  if (!hasUsefulValues(rows, dataStart, iNuevo, "number")) iNuevo = nmeCol + 3;
+  if (!hasUsefulValues(rows, dataStart, iUsado, "number")) iUsado = nmeCol + 4;
+  if (!hasUsefulValues(rows, dataStart, iRezago, "number")) iRezago = nmeCol + 5;
+  if (!hasUsefulValues(rows, dataStart, iBA, "number")) iBA = nmeCol + 6;
+  if (!hasUsefulValues(rows, dataStart, iTotal, "number")) iTotal = nmeCol + 7;
 
   const out: InventarioRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
