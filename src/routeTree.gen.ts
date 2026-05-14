@@ -9,8 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ExportarRouteImport } from './routes/exportar'
+import { Route as DivergenciasRouteImport } from './routes/divergencias'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ConsolidadoRouteImport } from './routes/consolidado'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ExportarRoute = ExportarRouteImport.update({
+  id: '/exportar',
+  path: '/exportar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DivergenciasRoute = DivergenciasRouteImport.update({
+  id: '/divergencias',
+  path: '/divergencias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsolidadoRoute = ConsolidadoRouteImport.update({
+  id: '/consolidado',
+  path: '/consolidado',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +43,78 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/consolidado': typeof ConsolidadoRoute
+  '/dashboard': typeof DashboardRoute
+  '/divergencias': typeof DivergenciasRoute
+  '/exportar': typeof ExportarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/consolidado': typeof ConsolidadoRoute
+  '/dashboard': typeof DashboardRoute
+  '/divergencias': typeof DivergenciasRoute
+  '/exportar': typeof ExportarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/consolidado': typeof ConsolidadoRoute
+  '/dashboard': typeof DashboardRoute
+  '/divergencias': typeof DivergenciasRoute
+  '/exportar': typeof ExportarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/consolidado' | '/dashboard' | '/divergencias' | '/exportar'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/consolidado' | '/dashboard' | '/divergencias' | '/exportar'
+  id:
+    | '__root__'
+    | '/'
+    | '/consolidado'
+    | '/dashboard'
+    | '/divergencias'
+    | '/exportar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConsolidadoRoute: typeof ConsolidadoRoute
+  DashboardRoute: typeof DashboardRoute
+  DivergenciasRoute: typeof DivergenciasRoute
+  ExportarRoute: typeof ExportarRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/exportar': {
+      id: '/exportar'
+      path: '/exportar'
+      fullPath: '/exportar'
+      preLoaderRoute: typeof ExportarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/divergencias': {
+      id: '/divergencias'
+      path: '/divergencias'
+      fullPath: '/divergencias'
+      preLoaderRoute: typeof DivergenciasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consolidado': {
+      id: '/consolidado'
+      path: '/consolidado'
+      fullPath: '/consolidado'
+      preLoaderRoute: typeof ConsolidadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,7 +127,21 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConsolidadoRoute: ConsolidadoRoute,
+  DashboardRoute: DashboardRoute,
+  DivergenciasRoute: DivergenciasRoute,
+  ExportarRoute: ExportarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
