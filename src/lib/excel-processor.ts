@@ -54,7 +54,12 @@ export type Divergencia = {
 // --- Normalizers ---
 export function normNME(v: any): string {
   if (v === null || v === undefined) return "";
-  return String(v).replace(/\u00A0/g, " ").trim().toUpperCase();
+  const compact = String(v)
+    .replace(/\u00A0/g, " ")
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, "");
+  const match = compact.match(/\d{4}IN\d+/);
+  return match ? match[0] : compact.trim();
 }
 
 export function normText(v: any): string {
@@ -149,9 +154,7 @@ const NME_VARIANTS = ["NME", "N M E", "N.M.E", "NroNME", "NumeroNME", "CodigoNME
 const NME_PATTERN = /^\d{4}IN\d+$/i;
 
 function isNMEValue(v: any): boolean {
-  if (v === null || v === undefined) return false;
-  const s = String(v).replace(/[\s\u00A0]/g, "").toUpperCase();
-  return NME_PATTERN.test(s);
+  return NME_PATTERN.test(normNME(v));
 }
 
 // Detecta la columna del NME escaneando los valores de las primeras filas
@@ -169,7 +172,7 @@ function findNMEColByPattern(rows: any[][]): { col: number; firstDataRow: number
     }
     if (hits > bestHits) { bestHits = hits; bestCol = c; firstRow = fr; }
   }
-  return bestHits >= 2 ? { col: bestCol, firstDataRow: firstRow } : { col: -1, firstDataRow: -1 };
+  return bestHits >= 1 ? { col: bestCol, firstDataRow: firstRow } : { col: -1, firstDataRow: -1 };
 }
 
 // Combina 1-3 filas de encabezado para soportar headers multilínea (ej: "Arancel" / "Importe")
