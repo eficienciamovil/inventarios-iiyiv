@@ -9,12 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as HistorialRouteImport } from './routes/historial'
 import { Route as ExportarRouteImport } from './routes/exportar'
 import { Route as DivergenciasRouteImport } from './routes/divergencias'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ControlRouteImport } from './routes/control'
 import { Route as ConsolidadoRouteImport } from './routes/consolidado'
 import { Route as IndexRouteImport } from './routes/index'
 
+const HistorialRoute = HistorialRouteImport.update({
+  id: '/historial',
+  path: '/historial',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExportarRoute = ExportarRouteImport.update({
   id: '/exportar',
   path: '/exportar',
@@ -28,6 +35,11 @@ const DivergenciasRoute = DivergenciasRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ControlRoute = ControlRouteImport.update({
+  id: '/control',
+  path: '/control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsolidadoRoute = ConsolidadoRouteImport.update({
@@ -44,49 +56,80 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/consolidado': typeof ConsolidadoRoute
+  '/control': typeof ControlRoute
   '/dashboard': typeof DashboardRoute
   '/divergencias': typeof DivergenciasRoute
   '/exportar': typeof ExportarRoute
+  '/historial': typeof HistorialRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/consolidado': typeof ConsolidadoRoute
+  '/control': typeof ControlRoute
   '/dashboard': typeof DashboardRoute
   '/divergencias': typeof DivergenciasRoute
   '/exportar': typeof ExportarRoute
+  '/historial': typeof HistorialRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/consolidado': typeof ConsolidadoRoute
+  '/control': typeof ControlRoute
   '/dashboard': typeof DashboardRoute
   '/divergencias': typeof DivergenciasRoute
   '/exportar': typeof ExportarRoute
+  '/historial': typeof HistorialRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/consolidado' | '/dashboard' | '/divergencias' | '/exportar'
+  fullPaths:
+    | '/'
+    | '/consolidado'
+    | '/control'
+    | '/dashboard'
+    | '/divergencias'
+    | '/exportar'
+    | '/historial'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/consolidado' | '/dashboard' | '/divergencias' | '/exportar'
+  to:
+    | '/'
+    | '/consolidado'
+    | '/control'
+    | '/dashboard'
+    | '/divergencias'
+    | '/exportar'
+    | '/historial'
   id:
     | '__root__'
     | '/'
     | '/consolidado'
+    | '/control'
     | '/dashboard'
     | '/divergencias'
     | '/exportar'
+    | '/historial'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConsolidadoRoute: typeof ConsolidadoRoute
+  ControlRoute: typeof ControlRoute
   DashboardRoute: typeof DashboardRoute
   DivergenciasRoute: typeof DivergenciasRoute
   ExportarRoute: typeof ExportarRoute
+  HistorialRoute: typeof HistorialRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/historial': {
+      id: '/historial'
+      path: '/historial'
+      fullPath: '/historial'
+      preLoaderRoute: typeof HistorialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/exportar': {
       id: '/exportar'
       path: '/exportar'
@@ -106,6 +149,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/control': {
+      id: '/control'
+      path: '/control'
+      fullPath: '/control'
+      preLoaderRoute: typeof ControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/consolidado': {
@@ -128,10 +178,22 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConsolidadoRoute: ConsolidadoRoute,
+  ControlRoute: ControlRoute,
   DashboardRoute: DashboardRoute,
   DivergenciasRoute: DivergenciasRoute,
   ExportarRoute: ExportarRoute,
+  HistorialRoute: HistorialRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

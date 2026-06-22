@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, Upload, Table2, AlertTriangle, Download, Boxes } from "lucide-react";
+import { LayoutDashboard, Upload, Table2, AlertTriangle, Download, Boxes, ClipboardCheck, History } from "lucide-react";
 
 const nav = [
   { to: "/", label: "Inicio", icon: Upload },
@@ -7,6 +7,8 @@ const nav = [
   { to: "/consolidado", label: "Consolidado", icon: Table2 },
   { to: "/divergencias", label: "Divergencias", icon: AlertTriangle },
   { to: "/exportar", label: "Exportar", icon: Download },
+  { to: "/control", label: "Control", icon: ClipboardCheck },
+  { to: "/historial", label: "Historial", icon: History },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -47,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
       <main className="flex-1 mx-auto w-full max-w-[1400px] px-6 py-8">{children}</main>
       <footer className="border-t py-4 text-center text-xs text-muted-foreground">
-        Procesamiento 100% local · Los archivos no se cargan a ningún servidor
+        Procesamiento local · Controles guardados en Supabase
       </footer>
     </div>
   );

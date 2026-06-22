@@ -20,6 +20,11 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Variables de entorno (nunca subir al repo)
+.env
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

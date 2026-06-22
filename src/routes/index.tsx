@@ -53,7 +53,7 @@ function Home() {
     await new Promise((r) => setTimeout(r, 50));
     try {
       const res = consolidate(state.aranceles, state.inventario);
-      store.set({ resultado: res });
+      store.set({ resultado: res, consolidadoId: null });
       nav({ to: "/dashboard" });
     } catch (e: any) {
       setError(e?.message || "Error consolidando");
