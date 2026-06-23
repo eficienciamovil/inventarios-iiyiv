@@ -1,6 +1,5 @@
-import { createRootRouteWithContext, HeadContent, Outlet, Scripts, useRouter, Link } from "@tanstack/react-router";
+import { createRootRouteWithContext, Outlet, Link, useRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
   return (
@@ -28,47 +27,16 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Consolidador de Inventario · Pareto" },
-      { name: "description", content: "Cruza aranceles e inventario por NME, valoriza, aplica Pareto y genera informes de divergencias." },
-      { property: "og:title", content: "Consolidador de Inventario · Pareto" },
-      { name: "twitter:title", content: "Consolidador de Inventario · Pareto" },
-      { property: "og:description", content: "Cruza aranceles e inventario por NME, valoriza, aplica Pareto y genera informes de divergencias." },
-      { name: "twitter:description", content: "Cruza aranceles e inventario por NME, valoriza, aplica Pareto y genera informes de divergencias." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3994ce01-89e9-4b0d-aef6-36c069581f8a/id-preview-e76c8546--9acc5baf-467f-4a2f-b672-1c2464c3c873.lovable.app-1778885325324.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3994ce01-89e9-4b0d-aef6-36c069581f8a/id-preview-e76c8546--9acc5baf-467f-4a2f-b672-1c2464c3c873.lovable.app-1778885325324.png" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:type", content: "website" },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" },
-    ],
-  }),
-  shellComponent: RootShell,
-  component: () => <Outlet />,
+  component: Root,
   notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
+  errorComponent: ({ error, reset }) => <ErrorComponent error={error} reset={reset!} />,
 });
 
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="es">
-      <head><HeadContent /></head>
-      <body>
-        <QueryProvider>{children}</QueryProvider>
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-
-function QueryProvider({ children }: { children: React.ReactNode }) {
+function Root() {
   const { queryClient } = Route.useRouteContext();
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Outlet />
+    </QueryClientProvider>
+  );
 }

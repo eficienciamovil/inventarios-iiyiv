@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { useStore } from "@/lib/store";
 import { Card } from "@/components/ui/card";
@@ -21,7 +20,6 @@ export const Route = createFileRoute("/exportar")({
 
 function Exportar() {
   const { resultado } = useStore();
-  const enviarSheet = useServerFn(exportToGoogleSheet);
   const [busy, setBusy] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
 
@@ -63,14 +61,12 @@ function Exportar() {
         Importe: d.importe,
         Observación: d.observacion,
       }));
-      const res = await enviarSheet({
-        data: {
-          title: `Consolidado inventario ${fecha}`,
-          sheets: [
-            { name: "Consolidado", rows: consolidadoToExportRows(rows) },
-            { name: "Divergencias", rows: divergRows },
-          ],
-        },
+      const res = await exportToGoogleSheet({
+        title: `Consolidado inventario ${fecha}`,
+        sheets: [
+          { name: "Consolidado", rows: consolidadoToExportRows(rows) },
+          { name: "Divergencias", rows: divergRows },
+        ],
       });
       setSheetUrl(res.url);
       toast.success("Enviado a Google Sheets");
